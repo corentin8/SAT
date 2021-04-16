@@ -9,6 +9,7 @@ import fr.uga.pddl4j.planners.statespace.StateSpacePlanner;
 import fr.uga.pddl4j.util.BitState;
 import fr.uga.pddl4j.util.Plan;
 import fr.uga.pddl4j.util.SequentialPlan;
+import fr.uga.pddl4j.planners.Statistics;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,6 +64,8 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         // We get the goal from the planning problem
         final BitState goal = new BitState(problem.getGoal());
         // Nothing to do, goal is already satisfied by the initial state
+        long begin;
+        begin = System.currentTimeMillis();
         if (init.satisfy(problem.getGoal())) {
             return plan;
         }
@@ -79,8 +82,14 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             ISolver solver = SolverFactory.newDefault();
             solver.setTimeout(timeout);
             ModelIterator mi = new ModelIterator(solver);
-            SATEncoding encode=new SATEncoding(problem,0);
 
+            getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
+
+            begin = System.currentTimeMillis();
+            SATEncoding encode=new SATEncoding(problem,0);
+            getStatistics().setTimeToEncode(System.currentTimeMillis() - begin);
+
+            begin = System.currentTimeMillis();
             // Prepare the solver to accept MAXVAR variables. MANDATORY for MAXSAT solving
             solver.newVar(MAXVAR);
             solver.setExpectedNumberOfClauses(NBCLAUSES);
@@ -99,7 +108,11 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 // e.g. int [] clause = {1, -3, 7}; is fine
                 // while int [] clause = {1, -3, 7, 0}; is not fine
                 erreuresat=false;
+
+                getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
+                begin = System.currentTimeMillis();
                 tmp=encode.next(problem);
+
                 for(int []r :tmp){
                     try {
                         solver.addClause(new VecInt(r)); // adapt Array to IVecInt
@@ -110,6 +123,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     }
                 }
                 g=encode.goal(problem);
+
                 for(int [] r : g){
                     try {
                         if(r[0]!=0) {
@@ -122,16 +136,22 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                         erreuresat=true;
                     }
                 }
+                getStatistics().setTimeToEncode(getStatistics().getTimeToEncode()+System.currentTimeMillis() - begin);
                 // We are done. Working now on the IProblem interface
+                begin = System.currentTimeMillis();
                 ip = solver;
                 try {
                     if (ip.isSatisfiable() && !erreuresat) {
-                        encode.decode(ip.findModel(),problem,plan);
+                        int [] mod=ip.findModel();
+                        encode.decode(mod,problem,plan);
                         trouver=false;
                     } else {
                         //System.out.println("fonctionne pas");
                         //System.out.println("profondeure ="+encode.getsteps());
                         solver = SolverFactory.newDefault();
+                        solver.setTimeout(timeout);
+                        solver.newVar(MAXVAR);
+                        solver.setExpectedNumberOfClauses(NBCLAUSES);
                         //solver.clearLearntClauses();
                     }
                 } catch (TimeoutException e){
@@ -140,7 +160,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 }
 
             }
-
+            getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
 
             // Finally, we return the solution plan or null otherwise
             return plan;
@@ -229,6 +249,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
         final SATPlanner planner = new SATPlanner(arguments);
         final ProblemFactory factory = ProblemFactory.getInstance();
+        Statistics info = planner.getStatistics();
 
         File domain = (File) arguments.get(Planner.DOMAIN);
         File problem = (File) arguments.get(Planner.PROBLEM);
@@ -248,7 +269,10 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             Planner.getLogger().trace("\nParsing problem file: successfully done\n");
         }
 
+        long begin = System.currentTimeMillis();
         final CodedProblem pb = factory.encode();
+        planner.getStatistics().setTimeToParse(System.currentTimeMillis() - begin);
+
         Planner.getLogger().trace("\nGrounding: successfully done ("
                 + pb.getOperators().size() + " ops, "
                 + pb.getRelevantFacts().size() + " facts)\n");
@@ -259,10 +283,17 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             System.exit(0);
         }
 
+        begin = System.currentTimeMillis();
         final Plan plan = planner.search(pb);
+
         Planner.getLogger().trace(String.format("%nfound plan as follows:%n%n" + pb.toString(plan)));
         Planner.getLogger().trace(String.format("%nplan total cost: %4.2f%n%n", plan.cost()));
-        System.out.println("fin solver");
+
+        long time = info.getTimeToParse() +  info.getTimeToEncode() + info.getTimeToSearch();
+        Planner.getLogger().trace(String.format("%ntime spent:   %8.2f seconds parsing %n", info.getTimeToParse()/1000.0));
+        Planner.getLogger().trace(String.format("              %8.2f seconds encoding %n", info.getTimeToEncode()/1000.0));
+        Planner.getLogger().trace(String.format("              %8.2f seconds searching%n", info.getTimeToSearch()/1000.0));
+        Planner.getLogger().trace(String.format("              %8.2f seconds total time%n", time/1000.0));
 
     }
 }
