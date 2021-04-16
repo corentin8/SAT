@@ -65,7 +65,6 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         final BitState goal = new BitState(problem.getGoal());
         // Nothing to do, goal is already satisfied by the initial state
         long begin;
-        begin = System.currentTimeMillis();
         if (init.satisfy(problem.getGoal())) {
             return plan;
         }
@@ -83,7 +82,6 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             solver.setTimeout(timeout);
             ModelIterator mi = new ModelIterator(solver);
 
-            getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
 
             begin = System.currentTimeMillis();
             SATEncoding encode=new SATEncoding(problem,0);
@@ -123,7 +121,6 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     }
                 }
                 g=encode.goal(problem);
-
                 for(int [] r : g){
                     try {
                         if(r[0]!=0) {
