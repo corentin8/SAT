@@ -10,6 +10,7 @@ import fr.uga.pddl4j.util.BitState;
 import fr.uga.pddl4j.util.Plan;
 import fr.uga.pddl4j.util.SequentialPlan;
 import fr.uga.pddl4j.planners.Statistics;
+import fr.uga.pddl4j.heuristics.relaxation.FastForward;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,6 +66,9 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         final BitState goal = new BitState(problem.getGoal());
         // Nothing to do, goal is already satisfied by the initial state
         long begin;
+        FastForward ff = new FastForward(problem);
+        int minSteps = ff.estimate(new BitState(problem.getInit()), problem.getGoal());
+
         if (init.satisfy(problem.getGoal())) {
             return plan;
         }
@@ -85,6 +89,9 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
             begin = System.currentTimeMillis();
             SATEncoding encode=new SATEncoding(problem,0);
+            for(int t=0;t<minSteps;t++){
+                encode.next(problem);
+            }
             getStatistics().setTimeToEncode(System.currentTimeMillis() - begin);
 
             begin = System.currentTimeMillis();
@@ -279,10 +286,21 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     +  "No search will solve it%n%n"));
             System.exit(0);
         }
+        //creation du planner qui utilisera A* dpdd4j
+        final SATPlanner plannerA = new SATPlanner(arguments);
+
+        ErrorManager errorManagerA = null;
+
+        begin = System.currentTimeMillis();
+        final Plan planA = plannerA.search(pb);
+        System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+planA.size());
+
+
 
         begin = System.currentTimeMillis();
         final Plan plan = planner.search(pb);
-
+        System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+plan.size());
+/*
         Planner.getLogger().trace(String.format("%nfound plan as follows:%n%n" + pb.toString(plan)));
         Planner.getLogger().trace(String.format("%nplan total cost: %4.2f%n%n", plan.cost()));
 
@@ -291,6 +309,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         Planner.getLogger().trace(String.format("              %8.2f seconds encoding %n", info.getTimeToEncode()/1000.0));
         Planner.getLogger().trace(String.format("              %8.2f seconds searching%n", info.getTimeToSearch()/1000.0));
         Planner.getLogger().trace(String.format("              %8.2f seconds total time%n", time/1000.0));
-
+*/
     }
 }
+
