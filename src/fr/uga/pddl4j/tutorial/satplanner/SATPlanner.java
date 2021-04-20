@@ -122,7 +122,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     try {
                         solver.addClause(new VecInt(r)); // adapt Array to IVecInt
                     } catch (ContradictionException e){
-                        System.out.println("SAT encoding failure!");
+                        //System.out.println("SAT encoding failure!");
                         e.printStackTrace();
                         System.exit(0);
                     }
@@ -159,7 +159,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                         //solver.clearLearntClauses();
                     }
                 } catch (TimeoutException e){
-                    System.out.println("Timeout! No solution found!");
+                    //System.out.println("Timeout! No solution found!");
                     System.exit(0);
                 }
 
@@ -268,38 +268,32 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         if (!errorManager.isEmpty()) {
             errorManager.printAll();
             System.exit(0);
-        } else {
+        } /*else {
             Planner.getLogger().trace("\nParsing domain file: successfully done");
             Planner.getLogger().trace("\nParsing problem file: successfully done\n");
-        }
+        }*/
 
         long begin = System.currentTimeMillis();
         final CodedProblem pb = factory.encode();
         planner.getStatistics().setTimeToParse(System.currentTimeMillis() - begin);
 
-        Planner.getLogger().trace("\nGrounding: successfully done ("
-                + pb.getOperators().size() + " ops, "
-                + pb.getRelevantFacts().size() + " facts)\n");
+       // Planner.getLogger().trace("\nGrounding: successfully done ("
+        //        + pb.getOperators().size() + " ops, "
+        //        + pb.getRelevantFacts().size() + " facts)\n");
 
         if (!pb.isSolvable()) {
-            Planner.getLogger().trace(String.format("Goal can be simplified to FALSE."
-                    +  "No search will solve it%n%n"));
+            //Planner.getLogger().trace(String.format("Goal can be simplified to FALSE."
+            //        +  "No search will solve it%n%n"));
             System.exit(0);
         }
-        //creation du planner qui utilisera A* dpdd4j
-        final SATPlanner plannerA = new SATPlanner(arguments);
-
-        ErrorManager errorManagerA = null;
-
-        begin = System.currentTimeMillis();
-        final Plan planA = plannerA.search(pb);
-        System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+planA.size());
-
 
 
         begin = System.currentTimeMillis();
         final Plan plan = planner.search(pb);
         System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+plan.size());
+
+
+
 /*
         Planner.getLogger().trace(String.format("%nfound plan as follows:%n%n" + pb.toString(plan)));
         Planner.getLogger().trace(String.format("%nplan total cost: %4.2f%n%n", plan.cost()));
