@@ -7,7 +7,7 @@ pname = sys.argv[1]
 
 # reading ./tempfile
 values_file = open('.tempfile')
-data = [[int(x) for x in line.split(' ')] for line in values_file.read().splitlines()]
+data = [[float(x) for x in line.split(' ')] for line in values_file.read().splitlines() if line != '']
 
 # spliting data
 mid = int(len(data)/2)
@@ -21,6 +21,8 @@ hsp.sort()
 # orgnizing for plotting
 sat = np.array(sat)
 hsp = np.array(hsp)
+
+print(sat, hsp)
 satTime, satSteps = sat[:,0], sat[:,1]
 hspTime, hspSteps = hsp[:,0], hsp[:,1]
 
