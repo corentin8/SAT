@@ -90,7 +90,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             begin = System.currentTimeMillis();
             SATEncoding encode=new SATEncoding(problem,0);
             for(int t=0;t<minSteps;t++){
-                encode.next(problem);
+                encode.next();
             }
             getStatistics().setTimeToEncode(System.currentTimeMillis() - begin);
 
@@ -116,7 +116,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
                 getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
                 begin = System.currentTimeMillis();
-                tmp=encode.next(problem);
+                tmp=encode.next();
 
                 for(int []r :tmp){
                     try {
@@ -145,18 +145,15 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 begin = System.currentTimeMillis();
                 ip = solver;
                 try {
-                    if (ip.isSatisfiable() && !erreuresat) {
+                    if (!erreuresat && ip.isSatisfiable()) {
                         int [] mod=ip.findModel();
                         encode.decode(mod,problem,plan);
                         trouver=false;
                     } else {
-                        //System.out.println("fonctionne pas");
-                        //System.out.println("profondeure ="+encode.getsteps());
                         solver = SolverFactory.newDefault();
                         solver.setTimeout(timeout);
                         solver.newVar(MAXVAR);
                         solver.setExpectedNumberOfClauses(NBCLAUSES);
-                        //solver.clearLearntClauses();
                     }
                 } catch (TimeoutException e){
                     //System.out.println("Timeout! No solution found!");

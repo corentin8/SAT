@@ -23,6 +23,13 @@ public final class SATEncoding {
      * A SAT problem in dimacs format is a list of int list a.k.a clauses
      */
     private ArrayList<int []> dimacs;
+    //les valeur a encoder d'une étape a une autre eront toujours les même et seront stocker dans les variable etape*
+    private ArrayList<int []> etapeTransitionP;
+    private ArrayList<int []> etapeTransitionN;
+    private ArrayList<int []> etapeExclusion;
+    private ArrayList<int []> etapePrecond;
+    private ArrayList<int []> etapeP;
+    private ArrayList<int []> etapeN;
 
     /*
      * Current number of steps of the SAT encoding
@@ -37,6 +44,14 @@ public final class SATEncoding {
     public SATEncoding(final CodedProblem problem, final int steps) {
         super();
         dimacs= new ArrayList<int[]>();
+
+        etapeTransitionP= new ArrayList<int[]>();
+        etapeTransitionN= new ArrayList<int[]>();
+        etapeExclusion= new ArrayList<int[]>();
+        etapePrecond= new ArrayList<int[]>();
+        etapeP= new ArrayList<int[]>();
+        etapeN= new ArrayList<int[]>();
+
         this.steps = steps;
         // We get the initial state from the planning problem
         int res=0;
@@ -55,6 +70,7 @@ public final class SATEncoding {
                 dimacs.add(a);
             }
         }
+        etapeSup(problem);
 
 
         // Encoding of init
@@ -68,34 +84,27 @@ public final class SATEncoding {
     /*
      * SAT encoding for next step
      */
-    public ArrayList<int[]> next(final CodedProblem problem) {
+    public void etapeSup(final CodedProblem problem) {
         int codea;
-        int tailleobj=problem.getInit().getNegative().size();
-        Boolean [][] nap=new Boolean[tailleobj][problem.getOperators().size()];
-        Boolean [][] pan=new Boolean[tailleobj][problem.getOperators().size()];
-        int [] comptenap=new int[tailleobj];
-        int [] comptepan=new int[tailleobj];
+        ArrayList<ArrayList<Integer>> transitionP= new ArrayList<ArrayList<Integer>>();
+        ArrayList<ArrayList<Integer>> transitionN= new ArrayList<ArrayList<Integer>>();
         int[] neg;
         int[] pos;
         int[] pre;
 
-        //initialisation de variable pour mémoriser les State transitions
-        for (int r=0;r<tailleobj;r++){
-            comptenap[r]=0;
-            comptepan[r]=0;
-            for(int o=0;o<problem.getOperators().size();o++){
-                nap[r][o]=false;
-                pan[r][o]=false;
-            }
-        }
+
+        //faire une action exclu de faire une autre action a cette étape A->!B <=> !A || !B
         int [] exclusion;
         for (int i = 0; i < problem.getOperators().size(); i++) {
             for (int j = 0; j < problem.getOperators().size(); j++) {
                 if(i!=j){
                     exclusion=new int[2];
-                    exclusion[0]=-pair(i+1+tailleobj,steps);
-                    exclusion[1]=-pair(j+1+tailleobj,steps);
-                    dimacs.add(exclusion);
+                    //exclusion[0]=-pair(i+1+tailleobj,steps);
+                    //exclusion[1]=-pair(j+1+tailleobj,steps);
+
+                    exclusion[0]=i+1;
+                    exclusion[1]=j+1;
+                    etapeExclusion.add(exclusion);
                 }
             }
         }
@@ -103,39 +112,54 @@ public final class SATEncoding {
         //parcour de toutes opération possible
         for (int i = 0; i < problem.getOperators().size(); i++) {
             final BitOp a = problem.getOperators().get(i);
-            codea=pair(i+1+tailleobj,steps);
-            //encodage des préconditions des actions
+           // codea=pair(i+1+tailleobj,steps);
+            codea=i+1;
+            //récupération des préconditions des actions A->P <=> !A || P
             final BitVector precond = a.getPreconditions().getPositive();
             for (int p=0; p<precond.size();p++){
                 if(precond.get(p)) {
                     pre = new int[2];
-                    pre[1] = -codea;
-                    pre[0] =pair(p+1,steps);
-                    dimacs.add(pre);
+//                    pre[1] = -codea;
+//                    pre[0] =pair(p+1,steps);
+                    pre[1] =codea;
+                    pre[0] =p+1;
+                    etapePrecond.add(pre);
                 }
             }
             final BitVector positive = a.getUnconditionalEffects().getPositive();
             final BitVector negative = a.getUnconditionalEffects().getNegative();
-            //encodage des effet positife des actions
+            //récupération des effet positife des actions   A(i)->P(i+1) <=> !A(i) || P(i+1)
             for (int p=0; p<positive.size();p++) {
                 if (positive.get(p)) {
                     pos = new int[2];
-                    pos[0] = -codea;
-                    pos[1] = pair(p + 1, steps + 1);
-                    dimacs.add(pos);
-                    nap[p][i] = true;
-                    comptenap[p]++;
+//                    pos[0] = -codea;
+//                    pos[1] = pair(p + 1, steps + 1);
+                    pos[0] = codea;
+                    pos[1] = p + 1;
+                    etapeP.add(pos);
+                    while(transitionP.size()<=p){
+                        transitionP.add(new ArrayList<Integer>());
+                    }
+                    transitionP.get(p).add(i);
+//                    nap[p][i] = true;
+//                    comptenap[p]++;
                 }
             }
-            //encodage des effet négatife des actions
+            //récupération des effet négatife des actions A(i)->N(i+1) <=> !A(i) || N(i+1) N est négatife
             for (int p=0; p<negative.size();p++) {
                 if(negative.get(p)) {
                     neg = new int[2];
-                    neg[0] =-codea;
-                    neg[1] =-pair(p+1,steps+1);
-                    dimacs.add(neg);
-                    pan[p][i]=true;
-                    comptepan[p]++;
+//                    neg[0] =-codea;
+//                    neg[1] =-pair(p+1,steps+1);
+                    neg[0] =codea;
+                    neg[1] =p+1;
+                    etapeN.add(neg);
+                    while(transitionN.size()<=p){
+                        transitionN.add(new ArrayList<Integer>());
+                    }
+                    transitionN.get(p).add(i);
+//                    pan[p][i]=true;
+//                    comptepan[p]++;
 
                 }
 
@@ -144,37 +168,104 @@ public final class SATEncoding {
 
         int indicel1;
         int indicel2;
-        for (int r=0;r<tailleobj;r++) {
-            indicel1=0;
-            indicel2=0;
-            //encodage des State transitions pour le passage de négatife a positife
-            if(comptenap[r]>0){
-                int []l1=new int [comptenap[r]+2];
-                l1[0]=pair(r+1,steps);
-                l1[1]=-pair(r+1,steps+1);
-                for(int y=0;y<problem.getOperators().size();y++) {
-                    if (nap[r][y]) {
-                        l1[indicel1 + 2] = pair(y + 1 + tailleobj, steps);
-                        indicel1++;
-                    }
+        if(tailleobj<transitionP.size()){
+            tailleobj=transitionP.size();
+        }
+        for (int r=0;r<transitionP.size();r++) {
+            indicel1 = 2;
+            //récupération des State transitions pour le passage de négatife a positife
+            if (transitionP.get(r).size() > 0) {
+                int[] l1 = new int[transitionP.get(r).size() + 2];
+//                l1[0]=pair(r+1,steps);
+//                l1[1]=-pair(r+1,steps+1);
+                l1[0] = r + 1;
+                l1[1] = r + 1;
+                for (int val : (transitionP.get(r))) {
+                    l1[indicel1] = val + 1;
+                    indicel1++;
                 }
-                dimacs.add(l1);
-            }
-            //encodage des State transitions pour le passage de positife a négatife
-            if(comptepan[r]>0){
-                int []l2=new int [comptepan[r]+2];
-                l2[0]=-pair(r+1,steps);
-                l2[1]=pair(r+1,steps+1);
-                for(int y=0;y<problem.getOperators().size();y++){
-                    if (pan[r][y]) {
-                        l2[indicel2 + 2] = pair(y+1+tailleobj, steps);
-                        indicel2++;
-                    }
-                }
-                dimacs.add(l2);
+                etapeTransitionP.add(l1);
             }
         }
+        if(tailleobj<transitionN.size()){
+            tailleobj=transitionN.size();
+        }
+        for (int r=0;r<transitionN.size();r++) {
+            indicel2 = 2;
+            //récupération des State transitions pour le passage de positife a négatife
+            if(transitionN.get(r).size()>0){
+                int []l2=new int [transitionN.get(r).size()+2];
+//                l2[0]=-pair(r+1,steps);
+//                l2[1]=pair(r+1,steps+1);
+                l2[0]=r+1;
+                l2[1]=r+1;
+                for(int val : (transitionN.get(r))){
+                    l2[indicel2] = val+1;
+                    indicel2++;
+                }
+                etapeTransitionN.add(l2);
+            }
+        }
+    }
+
+    public ArrayList<int[]> next(){
+
+//        etapeTransitionP;
+//        etapeTransitionN;
+//        etapeExclusion;
+//        etapePrecond;
+//        etapeP;
+//        etapeN;
+        int res[];
+        for (int[] tmp : etapeExclusion){
+            res= new int[2];
+            res[0]=-pair(tmp[0]+tailleobj,steps);
+            res[1]=-pair(tmp[1]+tailleobj,steps);
+            dimacs.add(res);
+        }
+
+        for (int[] tmp : etapePrecond){
+            res= new int[2];
+            res[0]=-pair(tmp[1]+tailleobj,steps);
+            res[1]=pair(tmp[0],steps);
+            dimacs.add(res);
+        }
+
+        for (int[] tmp : etapeP){
+            res= new int[2];
+            res[0]=-pair(tmp[0]+tailleobj,steps);
+            res[1]=pair(tmp[1],steps+1);
+            dimacs.add(res);
+        }
+
+        for (int[] tmp : etapeN){
+            res= new int[2];
+            res[0]=-pair(tmp[0]+tailleobj,steps);
+            res[1]=-pair(tmp[1],steps+1);
+            dimacs.add(res);
+        }
+
+        for (int[] tmp : etapeTransitionP){
+            res= new int[tmp.length];
+            res[0]=pair(tmp[0],steps);
+            res[1]=-pair(tmp[1],steps+1);
+            for(int u=2;u<tmp.length;u++){
+                res[u]=pair(tmp[u]+tailleobj,steps);
+            }
+            dimacs.add(res);
+        }
+
+        for (int[] tmp : etapeTransitionN){
+            res= new int[tmp.length];
+            res[0]=-pair(tmp[0],steps);
+            res[1]=pair(tmp[1],steps+1);
+            for(int u=2;u<tmp.length;u++){
+                res[u]=pair(tmp[u]+tailleobj,steps);
+            }
+            dimacs.add(res);
+        }
         steps++;
+
         return dimacs;
     }
 
@@ -192,10 +283,7 @@ public final class SATEncoding {
             if (goalp.get(go)){
                 code=pair(go+1,steps);
                 res[go][0]=code;
-            }/*
-            else if(goaln.get(go)){
-                res[go][0]=-code;
-            }*/
+            }
         }
         return res;
     }
