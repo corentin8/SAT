@@ -80,7 +80,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             // SAT solver max number of var
             final int MAXVAR = 1000000;
             // SAT solver max number of clauses
-            final int NBCLAUSES = 500000;
+            final int NBCLAUSES = 100000000;
 
             ISolver solver = SolverFactory.newDefault();
             solver.setTimeout(timeout);
@@ -88,7 +88,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
 
             begin = System.currentTimeMillis();
-            SATEncoding encode=new SATEncoding(problem,0);
+            SATEncoding encode=new SATEncoding(problem,NBCLAUSES);
             for(int t=0;t<minSteps;t++){
                 encode.next();
             }
@@ -107,7 +107,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             int [][]g;
             ArrayList<int[]>tmp;
             IProblem ip;
-            while(trouver && encode.getsteps()<steps) {
+            while(trouver /*&& encode.getsteps()<steps*/) {
                 // the clause should not contain a 0, only integer (positive or negative)
                 // with absolute values less or equal to MAXVAR
                 // e.g. int [] clause = {1, -3, 7}; is fine
@@ -117,6 +117,9 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 getStatistics().setTimeToSearch(getStatistics().getTimeToSearch()+System.currentTimeMillis() - begin);
                 begin = System.currentTimeMillis();
                 tmp=encode.next();
+                if(tmp==null){
+                    return plan;
+                }
 
                 for(int []r :tmp){
                     try {
@@ -157,7 +160,8 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     }
                 } catch (TimeoutException e){
                     //System.out.println("Timeout! No solution found!");
-                    System.exit(0);
+                    return plan;
+                    //System.exit(0);
                 }
 
             }

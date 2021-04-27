@@ -36,13 +36,15 @@ public final class SATEncoding {
      */
     private int steps;
     private int tailleobj;
+    private int maxclause;
 
     /**
      *
      * @param
      */
-    public SATEncoding(final CodedProblem problem, final int steps) {
+    public SATEncoding(final CodedProblem problem, int maxclause) {
         super();
+        this.maxclause=maxclause;
         dimacs= new ArrayList<int[]>();
 
         etapeTransitionP= new ArrayList<int[]>();
@@ -96,7 +98,7 @@ public final class SATEncoding {
         //faire une action exclu de faire une autre action a cette étape A->!B <=> !A || !B
         int [] exclusion;
         for (int i = 0; i < problem.getOperators().size(); i++) {
-            for (int j = 0; j < problem.getOperators().size(); j++) {
+            for (int j = i; j < problem.getOperators().size(); j++) {
                 if(i!=j){
                     exclusion=new int[2];
                     //exclusion[0]=-pair(i+1+tailleobj,steps);
@@ -210,12 +212,10 @@ public final class SATEncoding {
 
     public ArrayList<int[]> next(){
 
-//        etapeTransitionP;
-//        etapeTransitionN;
-//        etapeExclusion;
-//        etapePrecond;
-//        etapeP;
-//        etapeN;
+        if(maxclause<dimacs.size()+etapeTransitionP.size()+etapeTransitionN.size()+
+                etapeExclusion.size()+etapePrecond.size()+etapeP.size()+etapeN.size()){
+            return null;
+        }
         int res[];
         for (int[] tmp : etapeExclusion){
             res= new int[2];
