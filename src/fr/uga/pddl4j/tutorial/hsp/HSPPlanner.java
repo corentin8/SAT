@@ -10,11 +10,9 @@ import fr.uga.pddl4j.planners.ProblemFactory;
 import fr.uga.pddl4j.parser.ErrorManager;
 
 import fr.uga.pddl4j.heuristics.relaxation.Heuristic;
-import fr.uga.pddl4j.planners.statespace.search.strategy.AStar;
 import fr.uga.pddl4j.planners.statespace.search.strategy.StateSpaceStrategy;
 
 import fr.uga.pddl4j.heuristics.relaxation.Heuristic;
-import fr.uga.pddl4j.planners.statespace.search.strategy.AStar;
 import fr.uga.pddl4j.planners.statespace.search.strategy.Node;
 import fr.uga.pddl4j.planners.statespace.search.strategy.StateSpaceStrategy;
 
@@ -23,18 +21,37 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Properties;
 
-/**
- * This class implements a simple forward planner based on A* algorithm.
- *
- * @author D. Pellier
- * @version 1.0 - 06.06.2018
- */
-public final class HSPPlanner extends AbstractStateSpacePlanner {
+public final class HSPPlanner {
 
 	/*
 	 * The arguments of the planner.
 	 */
 	private Properties arguments;
+
+    /**
+     * Computation timeout.
+     */
+    private static final int TIMEOUT = 30;
+
+    /**
+     * Default Heuristic Type.
+     */
+    private static final Heuristic.Type HEURISTIC_TYPE = Heuristic.Type.FAST_FORWARD;
+
+    /**
+     * Default Heuristic Weight.
+     */
+    private static final double HEURISTIC_WEIGHT = 1.0;
+
+    /**
+     * Default Trace level.
+     */
+    private static final int TRACE_LEVEL = 0;
+
+    /**
+     * Default statistics computation.
+     */
+    private static final boolean STATISTICS = false;
 
 	/**
 	 * Creates a new HSPPlanner planner with the default parameters.
@@ -59,7 +76,6 @@ public final class HSPPlanner extends AbstractStateSpacePlanner {
 	 *
 	 * -o <i>str</i>   operator file name
 	 * -f <i>str</i>   fact file name
-	 * -w <i>num</i>   the weight used in the a star search (preset: 1)
 	 * -t <i>num</i>   specifies the maximum CPU-time in seconds (preset: 300)
 	 * -h              print this message
 	 *
@@ -76,7 +92,6 @@ public final class HSPPlanner extends AbstractStateSpacePlanner {
 		final StringBuilder strb = new StringBuilder();
 		strb.append("\nusage of PDDL4J:\n").append("OPTIONS   DESCRIPTIONS\n")
 				.append("-o <str>    operator file name\n").append("-f <str>    fact file name\n")
-				.append("-w <num>    the weight used in the a star seach (preset: 1.0)\n")
 				.append("-t <num>    specifies the maximum CPU-time in seconds (preset: 300)\n")
 				.append("-h          print this message\n\n");
 		Planner.getLogger().trace(strb.toString());
@@ -108,28 +123,12 @@ public final class HSPPlanner extends AbstractStateSpacePlanner {
 				if (timeout < 0)
 					return null;
 				arguments.put(Planner.TIMEOUT, timeout);
-			} else if ("-w".equalsIgnoreCase(args[i]) && ((i + 1) < args.length)) {
-				final double weight = Double.parseDouble(args[i + 1]);
-				if (weight < 0)
-					return null;
-				arguments.put(StateSpacePlanner.WEIGHT, weight);
 			} else {
 				return null;
 			}
 		}
 		// Return null if the domain or the problem was not specified
 		return (arguments.get(Planner.DOMAIN) == null || arguments.get(Planner.PROBLEM) == null) ? null : arguments;
-	}
-
-	/**
-	 * Solves the planning problem and returns the first solution search found.
-	 *
-	 * @param problem the problem to be solved.
-	 * @return a solution search or null if it does not exist.
-	 */
-	@Override
-	public Plan search(final CodedProblem problem) {
-		return new HSP().search(problem);
 	}
 
 	public static void main(String[] args) {
@@ -139,8 +138,6 @@ public final class HSPPlanner extends AbstractStateSpacePlanner {
 			HSPPlanner.printUsage();
 			System.exit(0);
 		}
-
-		final HSPPlanner planner = new HSPPlanner(arguments);
 
 		final ProblemFactory factory = ProblemFactory.getInstance();
 
@@ -157,35 +154,21 @@ public final class HSPPlanner extends AbstractStateSpacePlanner {
 		if (!errorManager.isEmpty()) {
 			errorManager.printAll();
 			System.exit(0);
-		} else {
-			Planner.getLogger().trace("\nparsing domain file done successfully");
-			Planner.getLogger().trace("\nparsing problem file done successfully\n");
 		}
 
 		final CodedProblem pb = factory.encode();
 
-		Planner.getLogger().trace("\nencoding problem done successfully (" + pb.getOperators().size() + " ops, "
-				+ pb.getRelevantFacts().size() + " facts)\n");
+        long begin = System.currentTimeMillis();
+        begin = System.currentTimeMillis();
+        HSP planner = new HSP(TIMEOUT * 1000, HEURISTIC_TYPE, HEURISTIC_WEIGHT, STATISTICS, TRACE_LEVEL);
+        final Plan plan = planner.search(pb);
 
-		if (!pb.isSolvable()) {
-			Planner.getLogger()
-					.trace(String.format("goal can be simplified to FALSE." + "no search will solve it%n%n"));
-			System.exit(0);
-		}
+        if (plan != null) {
+            System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+plan.size());
+            return;
+        }
 
-		HSP plannerHSP = new HSP();
-		// plannerHSP.setHeuristicType(Heuristic.Type.FAST_FORWARD);
-
-
-		// final Plan plan = plannerHSP.search(pb);
-		final Plan plan = planner.search(pb); // A*
-		if (plan != null) {
-			// Print plan information
-			Planner.getLogger().trace(String.format("%nfound plan as follows:%n%n" + pb.toString(plan)));
-			Planner.getLogger().trace(String.format("%nplan total cost: %4.2f%n%n", plan.cost()));
-		} else {
-			Planner.getLogger().trace(String.format(String.format("%nno plan found%n%n")));
-		}
+        System.out.println("* A* failed");
 
 	}
 }
