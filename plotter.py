@@ -10,21 +10,20 @@ values_file = open('.tempfile')
 data = [[float(x) for x in line.split(' ')] for line in values_file.read().splitlines() if line != '']
 
 # spliting data
-mid = int(len(data)/2)
-sat, hsp = data[:mid], data[mid:]
-problems = [i for i in range(len(sat))]
+#mid = int(len(data)/2)
 
 # sorting data by time
-sat.sort()
-hsp.sort()
+
+print(data)
+data.sort()
+print(data)
+problems = [i for i in range(len(data))]
 
 # orgnizing for plotting
-sat = np.array(sat)
-hsp = np.array(hsp)
-
-print(sat, hsp)
-satTime, satSteps = sat[:,0], sat[:,1]
-hspTime, hspSteps = hsp[:,0], hsp[:,1]
+hspTime = [e[0] for e in data]
+hspSteps = [e[1] for e in data]
+satTime = [e[2] for e in data]
+satSteps = [e[3] for e in data]
 
 print(satTime, satSteps)
 print(hspTime, hspSteps)
