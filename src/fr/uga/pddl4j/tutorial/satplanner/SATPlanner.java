@@ -57,7 +57,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
      * @return a solution search or null if it does not exist.
      */
     @Override
-    public Plan search(final CodedProblem problem) {
+    public Plan search(final CodedProblem problem) throws OutOfMemoryError {
         // The solution plan is sequential
         final Plan plan = new SequentialPlan();
         // We get the initial state from the planning problem
@@ -65,6 +65,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         // We get the goal from the planning problem
         final BitState goal = new BitState(problem.getGoal());
         // Nothing to do, goal is already satisfied by the initial state
+        long spentTime, startTime;
         long begin;
         FastForward ff = new FastForward(problem);
         int minSteps = ff.estimate(new BitState(problem.getInit()), problem.getGoal());
@@ -86,8 +87,10 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             solver.setTimeout(timeout);
             ModelIterator mi = new ModelIterator(solver);
 
+            startTime = System.currentTimeMillis();
 
             begin = System.currentTimeMillis();
+
             SATEncoding encode=new SATEncoding(problem,NBCLAUSES);
             for(int t=0;t<minSteps;t++){
                 encode.next();
@@ -162,6 +165,12 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                     //System.out.println("Timeout! No solution found!");
                     return plan;
                     //System.exit(0);
+                }
+
+                spentTime = (System.currentTimeMillis() - startTime) / 1000;
+                if (spentTime > timeout) {
+                    // System.out.println("time limit exceeded");
+                    return null;
                 }
 
             }
@@ -290,9 +299,20 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
 
         begin = System.currentTimeMillis();
-        final Plan plan = planner.search(pb);
-        System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+plan.size());
+        Plan plan = null;
+        try {
+            plan = planner.search(pb);
 
+        } catch (OutOfMemoryError e) {
+            // System.out.println("heap memory exceeded");
+        }
+
+        if (plan == null || plan.size() == 0) {
+            System.out.println("None");
+            return;
+        }
+
+        System.out.println((System.currentTimeMillis()-begin)/1000.0+" "+plan.size());
 
 
 /*
