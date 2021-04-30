@@ -7,7 +7,12 @@ pname = sys.argv[1]
 
 # reading ./tempfile
 values_file = open('.tempfile')
-data = [[float(x) for x in line.split(' ')] for line in values_file.read().splitlines() if line != '']
+hspfails = open('.hspfails')
+satfails = open('.satfails')
+
+data = [[float(x) for x in line.split(' ')] for line in values_file.read().splitlines() if not ('None' in line)]
+hspfails = str([x.split('/')[-1].split('.')[0] for x in hspfails.read().splitlines()]).strip('[]')
+satfails = str([x.split('/')[-1].split('.')[0] for x in satfails.read().splitlines()]).strip('[]')
 
 # spliting data
 #mid = int(len(data)/2)
@@ -44,7 +49,8 @@ p2.set_title('Steps plot')
 # setting title
 fig.suptitle('Performance of SAT based Planner vs HSP on {} problem'.format(pname))
 plt.legend(['SAT', 'HSP'])
+plt.gcf().text(0.25, 0.005, 'Failed on paroblems: {} \nSAT Failed on problems: {}'.format(hspfails, satfails), fontsize=10)
 
-# plt.savefig('plot.pgf')
+plt.savefig('figs/{}.png'.format(pname), dpi=200)
 
 plt.show()
