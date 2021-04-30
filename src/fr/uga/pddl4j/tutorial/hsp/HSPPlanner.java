@@ -164,11 +164,11 @@ public final class HSPPlanner {
         final Plan plan = planner.search(pb);
 
         if (plan != null) {
-            System.out.println((System.currentTimeMillis()-begin)/1000.0+"  "+plan.size());
+            System.out.println((System.currentTimeMillis()-begin)/1000.0+" "+plan.size());
             return;
         }
 
-        System.out.println("* A* failed");
+        System.out.println("None");
 
 	}
 }
